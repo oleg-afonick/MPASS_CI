@@ -4,8 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from pereval.models import Pereval, PassUser, Coords, Level, Images
-from pereval.serializers import PerevalSerializer
+from pereval.serializers import *
 
 
 class PerevalApiTestCase(APITestCase):
@@ -118,24 +117,16 @@ class PerevalApiTestCase(APITestCase):
         url = reverse('pereval-list')
         response = self.client.get(url)
         serializer_data = PerevalSerializer([self.pereval_1, self.pereval_2, self.pereval_3], many=True).data
-        for pereval in Pereval.objects.all():
-            print('********')
-            print(pereval.id)
-            print('--------')
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(serializer_data, response.data)
+        self.assertEqual(serializer_data, response.json())
         self.assertEqual(len(serializer_data), 3)
 
     def test_get_detail(self):
         url = reverse('pereval-detail', args=(self.pereval_1.id,))
         response = self.client.get(url)
         serializer_data = PerevalSerializer(self.pereval_1).data
-        for pereval in Pereval.objects.all():
-            print('********')
-            print(pereval.id)
-            print('--------')
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(serializer_data, response.data)
+        self.assertEqual(serializer_data, response.json())
 
     def test_create_and_user_reuse(self):
         url = reverse('pereval-list')
@@ -175,10 +166,6 @@ class PerevalApiTestCase(APITestCase):
         }
         json_data = json.dumps(data)
         response = self.client.post(url, data=json_data, content_type='application/json')
-        for pereval in Pereval.objects.all():
-            print('********')
-            print(pereval.id)
-            print('--------')
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(4, Pereval.objects.all().count())
         self.assertEqual(3, PassUser.objects.all().count())
@@ -222,10 +209,6 @@ class PerevalApiTestCase(APITestCase):
         json_data = json.dumps(data)
         response = self.client.post(url, data=json_data, content_type='application/json')
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        for pereval in Pereval.objects.all():
-            print('********')
-            print(pereval.id)
-            print('--------')
         self.assertEqual(3, Pereval.objects.all().count())
 
     def test_update(self):
@@ -268,9 +251,7 @@ class PerevalApiTestCase(APITestCase):
         json_data = json.dumps(data)
         response = self.client.patch(url, data=json_data, content_type='application/json')
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        print(self.pereval_1.status)
         self.pereval_1.refresh_from_db()
-        print(self.pereval_1.status)
         self.assertEqual(49.444444, self.pereval_1.coords.latitude)
         self.assertEqual(86.444444, self.pereval_1.coords.longitude)
         self.assertEqual(3444, self.pereval_1.coords.height)
@@ -408,8 +389,41 @@ class PerevalSerializerTestCase(TestCase):
             pereval=self.pereval_1
         )
 
+        self.pereval_2 = Pereval.objects.create(
+            user=PassUser.objects.create(
+                email="Test2@mail.ru",
+                lastname="Test2",
+                firstname="Test2",
+                surname="Test2",
+                phone="8-002-002-02-02"
+            ),
+            beauty_title="ПЕРЕВАЛ2",
+            title="ПЕРЕВАЛ2",
+            other_titles="ПЕРЕВАЛ2", connect='',
+            coords=Coords.objects.create(
+                latitude=49.000002,
+                longitude=86.000002,
+                height=3002),
+            level=Level.objects.create(
+                winter='',
+                summer='',
+                autumn='',
+                spring=''
+            )
+        )
+        self.image_2_1 = Images.objects.create(
+            data="https://pereval.ru/pereval2-1.jpg",
+            title="pereval2-1",
+            pereval=self.pereval_2
+        )
+        self.image_2_2 = Images.objects.create(
+            data="https://pereval.ru/pereval2-2.jpg",
+            title="pereval2-2",
+            pereval=self.pereval_2
+        )
+
     def test_ok(self):
-        data = PerevalSerializer([self.pereval_1], many=True).data
+        data = PerevalSerializer([self.pereval_1, self.pereval_2], many=True).data
         expected_data = [
             {
                 'id': self.pereval_1.id,
@@ -447,5 +461,41 @@ class PerevalSerializerTestCase(TestCase):
                 ],
                 'status': 'new'
             },
+            {
+                'id': self.pereval_2.id,
+                'user': {
+                    'email': 'Test2@mail.ru',
+                    'firstname': 'Test2',
+                    'lastname': 'Test2',
+                    'surname': 'Test2',
+                    'phone': '8-002-002-02-02'
+                },
+                'beauty_title': 'ПЕРЕВАЛ2',
+                'title': 'ПЕРЕВАЛ2',
+                'other_titles': 'ПЕРЕВАЛ2',
+                'connect': '',
+                'coords': {
+                    'latitude': 49.000002,
+                    'longitude': 86.000002,
+                    'height': 3002
+                },
+                'level': {
+                    'winter': '',
+                    'summer': '',
+                    'autumn': '',
+                    'spring': ''
+                },
+                'images': [
+                    {
+                        'data': 'https://pereval.ru/pereval2-1.jpg',
+                        'title': 'pereval2-1'
+                    },
+                    {
+                        'data': 'https://pereval.ru/pereval2-2.jpg',
+                        'title': 'pereval2-2'
+                    }
+                ],
+                'status': 'new'
+            }
         ]
         self.assertEqual(expected_data, data)
